@@ -19,15 +19,14 @@ class SachsenSpider(scrapy.Spider):
 
 
     def parse_schoolist(self, response):
-        forms = len(response.css('.ssdb_02 form'))
-        # TODO: use enumerate
-        for formnumber in range(forms):
-            yield scrapy.FormRequest.from_response(
-                response,
-                formnumber=formnumber,
-                meta={'cookiejar': formnumber},
-                dont_filter=True,
-                callback=self.parse_school)
+        first_ids = response.css('.ssdb_02 form input:nth-child(1) ::attr(value)').extract()
+        first_ids_names = response.css('.ssdb_02 form input:nth-child(1) ::attr(name)').extract()
+        second_ids = response.css('.ssdb_02 form input:nth-child(2) ::attr(value)').extract()
+        second_ids_names = response.css('.ssdb_02 form input:nth-child(2) ::attr(name)').extract()
+
+        for i, first_id in enumerate(first_ids):
+            form_url = self.base_url + 'index.php?' + first_ids_names[i] + '=' + str(first_id) + '&' + second_ids_names[i] + '=' + str(second_ids[i])
+            yield scrapy.Request(form_url, callback=self.parse_school, meta={'cookiejar': i})
 
 
     def parse_school(self, response):
@@ -52,17 +51,21 @@ class SachsenSpider(scrapy.Spider):
                 collection[key] = ' '.join(values).replace('zur Karte', '')
 
         collection["Leitbild"] = cleanjoin(response.css("#quickbar > div:nth-child(3) ::text").extract(), "\n")
-        students_url = response.xpath('//*[@id="navi"]/div[2]/ul/li[2]/ul/li[1]/a/@href').get()
-        if not students_url:
-            yield collection
-        else:    
-            request = scrapy.Request(self.base_url+students_url,
-                                    meta={'cookiejar': response.meta['cookiejar']},
-                                    callback=self.parse_students,
-                                    dont_filter=True)
-            request.meta['collection'] = collection
+        yield collection
 
-            yield request
+        ### IMPORTANT: As the following functions cause duplicates in the data I stopped them from being used
+
+        # students_url = response.xpath('//*[@id="navi"]/div[2]/ul/li[2]/ul/li[1]/a/@href').get()
+        # if not students_url:
+        #     yield collection
+        # else:    
+        #     request = scrapy.Request(self.base_url+students_url,
+        #                             meta={'cookiejar': response.meta['cookiejar']},
+        #                             callback=self.parse_students,
+        #                             dont_filter=True)
+        #     request.meta['collection'] = collection
+
+        #     yield request
 
 
     def parse_students(self, response):
@@ -223,11 +226,27 @@ class SachsenSpider(scrapy.Spider):
     def normalize(item: Item) -> School:
         v = list(item.get('phone_numbers').values())
         phone_numbers = v[0] if len(v) > 0 else None
+
+        address_objects = re.split('\d{5}', item.get('Postanschrift').strip())
+        if len(address_objects) == 0:
+            address = ''
+            zip = ''
+            city = ''
+        elif len(address_objects) == 1:
+            address = ''
+            zip = ''
+            city = address_objects[0].strip()
+        else:
+            address = re.split('\d{5}', item.get('Postanschrift'))[0].strip()
+            zip = re.findall('\d{5}', item.get('Postanschrift'))[0].strip()
+            city = re.split('\d{5}', item.get('Postanschrift'))[1].strip()
+
+
         return School(name=item.get('title'),
                       id='SN-{}'.format(item.get('Dienststellenschlüssel')),
-                      address=re.split('\d{5}', item.get('Postanschrift').strip())[0].strip(),
-                      zip=re.findall('\d{5}', item.get('Postanschrift').strip())[0],
-                      city=re.split('\d{5}', item.get('Postanschrift').strip())[1].strip(),
+                      address=address,
+                      zip=zip,
+                      city=city,
                       website=item.get('Homepage'),
                       email=item.get('E-Mail'),
                       school_type=item.get('Einrichtungsart'),
