@@ -60,4 +60,4 @@ class SaarlandSpider(CrawlSpider):
                       address=item.get('straße'),
                       city=item.get('ort'),
                       zip=item.get('plz'),
-                      id='SA-{' + item.get('telefon').replace(" ", "-") + '}')
+                      id='SL-{' + item.get('telefon').replace(" ", "-") + '}')
