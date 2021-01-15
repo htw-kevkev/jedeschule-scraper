@@ -6,17 +6,17 @@ from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 from lxml import html
 
+# School types: Berufliche Schule, Erweitere Realschule, Förderschule, Freie Waldorfschule,
+# Gemeinschatsschule, Grundschule, Gymnasium, Lyzeum, Realschule, Studienseminare
 
 class SaarlandSpider(CrawlSpider):
     name = "saarland"
     # allowed_domains = ["www.saarland.de/4526.htm"]
-    start_url = 'https://www.saarland.de/mbk/DE/portale/bildungsserver/themen/schulen-und-bildungswege/schuldatenbank/_functions/Schulsuche_Formular.html?pageLocale=de&submit=Suchen&templateQueryString='
-    schools = 'Grundschule+OR+Förderschule+OR+Gemeinschaftsschule+OR+Gymnasium+OR+"Berufliche+Schule"'
-    start_urls = [start_url + schools]
+    start_urls = ['https://www.saarland.de/mbk/DE/portale/bildungsserver/themen/schulen-und-bildungswege/schuldatenbank/_functions/Schulsuche_Formular.html']
     
-    rules = (Rule(LinkExtractor(allow=(), restrict_xpaths=('//a[@class="forward button"]',)), callback="parse_page", follow= True),)
+    rules = (Rule(LinkExtractor(allow=(), restrict_xpaths=('//a[@class="forward button"]',)), callback="parse_start_url", follow= True),)
     
-    def parse_page(self, response):
+    def parse_start_url(self, response):
         #schools = []
         cards =  html.fromstring(response.text).xpath('//div[@class="c-teaser-card"]')
         
