@@ -11,9 +11,14 @@ from jedeschule.items import School
 from jedeschule.pipelines.school_pipeline import SchoolPipelineItem
 
 Base = declarative_base()
-engine = create_engine(os.environ.get("DATABASE_URL"), echo=False)
-Session = sessionmaker(bind=engine)
-session = Session()
+
+
+def get_session():
+    engine = create_engine(os.environ.get("DATABASE_URL"), echo=False)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    return session
 
 
 class School(Base):
@@ -35,7 +40,10 @@ class School(Base):
     raw = Column(JSON)
 
     @staticmethod
-    def update_or_create(item: SchoolPipelineItem) -> School:
+    def update_or_create(item: SchoolPipelineItem, session=None) -> School:
+        if not session:
+            session = get_session()
+
         school = session.query(School).get(item.info['id'])
         if school:
             session.query(School).filter_by(id=item.info['id']).update({**item.info, 'raw': item.item})
@@ -45,13 +53,16 @@ class School(Base):
 
 
 class DatabasePipeline(object):
+    def __init__(self):
+        self.session = get_session()
+
     def process_item(self, item, spider):
-        school = School.update_or_create(item)
+        school = School.update_or_create(item, session=self.session)
         try:
-            session.add(school)
-            session.commit()
+            self.session.add(school)
+            self.session.commit()
         except SQLAlchemyError as e:
             logging.warning('Error when putting to DB')
             logging.warning(e)
-            session.rollback()
+            self.session.rollback()
         return school

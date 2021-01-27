@@ -1,13 +1,11 @@
-import os
 import unittest
-from unittest import mock
 
 from scrapy import Item
 from scrapy.item import Field
 
 from jedeschule.items import School
 from jedeschule.pipelines.school_pipeline import SchoolPipelineItem
-from jedeschule.pipelines.db_pipeline import School as DBSchool, session
+from jedeschule.pipelines.db_pipeline import School as DBSchool, get_session
 
 
 class TestSchoolItem(Item):
@@ -15,14 +13,14 @@ class TestSchoolItem(Item):
     nr = Field()
 
 
-@mock.patch.dict(os.environ, {'DATABASE_URL': 'sqlite://'})
 class TestSchool(unittest.TestCase):
     def test_import_new(self):
         # Arrange
         info = School(name='Test Schule', id='NDS-1')
         item = dict(name='Test Schule', nr=1)
         school_item: SchoolPipelineItem = SchoolPipelineItem(info=info, item=item)
-        db_item = DBSchool.update_or_create(school_item)
+        session = get_session()
+        db_item = DBSchool.update_or_create(school_item, session)
         session.add(db_item)
         session.commit()
 
@@ -39,7 +37,8 @@ class TestSchool(unittest.TestCase):
         info = School(name='Test Schule (updated)', id='NDS-1')
         item = dict(name='Test Schule', nr=1)
         school_item: SchoolPipelineItem = SchoolPipelineItem(info=info, item=item)
-        db_item = DBSchool.update_or_create(school_item)
+        session = get_session()
+        db_item = DBSchool.update_or_create(school_item, session)
         session.add(db_item)
         session.commit()
 
