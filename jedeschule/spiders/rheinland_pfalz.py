@@ -81,10 +81,13 @@ class RheinlandPfalzSpider(SchoolSpider):
         return string
 
     def normalize(self, item: Item) -> School:
+        city_parts = item.get('Ort').split(' ', 1)
+        zip, city = city_parts[0], city_parts[1]
         return School(name=item.get('name'),
                       id='RP-{}'.format(item.get('id')),
                       address=item.get('Adresse'),
-                      city=item.get('Ort'),
+                      zip=zip,
+                      city=city,
                       website=item.get('Internet'),
                       email=item.get('E-Mail'),
                       school_type=item.get('Schulform'),
