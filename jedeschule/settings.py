@@ -95,3 +95,8 @@ ITEM_PIPELINES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+# Set log level as default level 'DEBUG' logs so much that it makes error detection difficult
+LOG_LEVEL = 'INFO'
+# Set log to file instead of command prompt
+# LOG_FILE = 'log.txt'
