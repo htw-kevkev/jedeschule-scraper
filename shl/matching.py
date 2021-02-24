@@ -1,3 +1,6 @@
+#TODO: Before running this script please make sure that there are json files with scraped school data in directory 'jedeschule-scraper/data'
+#TODO: Before running this script please make sure that there is one json file with shl school data in directory 'jedeschule-scraper/shl/data/in/shl_data.json'
+
 import fuzzywuzzy
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
