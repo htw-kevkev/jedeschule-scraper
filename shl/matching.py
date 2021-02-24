@@ -15,113 +15,12 @@ from pathlib import Path
 # initialize logger
 log = utils.set_logging()
 
-def clean_data(df):
-    # format "straße" for fuzzy matching to get a better score
-    df['plz'] = df['plz'].apply('{:0>5}'.format)
-    df['anschrift'] = df['anschrift'].str.replace('str. ','straße ')
-    df['anschrift'] = df['anschrift'].str.replace('STR. ','STRAße ')
-    df['anschrift'] = df['anschrift'].str.replace('Str. ','straße ')
-    df['anschrift'] = df['anschrift'].str.replace('-straße ','-Straße ')
-    df['anschrift'] = df['anschrift'].str.replace('"','')
-    df = df.fillna('leer')
-    return df 
-
-def string_cleaning(col):
-    return col.replace(',',' ').replace(';', ' ').replace('\t',' ').replace('\n', ' ').replace('\r',' ')
-
 log.info('Loading input data')
-### loading scraped schools from json files in directory 'jedeschule-scraper/data'
-all_data = []
-path_scrape = Path(__file__) / "../../../data/"
-for file in os.listdir(path_scrape):
-    if file.endswith(".json"):
-        with open(os.path.join(path_scrape, file), encoding="utf8") as json_file:
-            data = json.load(json_file)
-            for d in data:
-                name = string_cleaning(d['info']['name'])
-                id = string_cleaning(d['info']['id'])
-                try:
-                    address = string_cleaning(d['info']['address'])
-                except:
-                    address = None
-
-                try:
-                    address2 = string_cleaning(d['info']['address2'])
-                except:
-                    address2 = None
-
-                try:
-                    zip = string_cleaning(d['info']['zip'])
-                except:
-                    zip = None
-
-                try:
-                    city = string_cleaning(d['info']['city'])
-                except:
-                    city = None
-
-                try:
-                    website = string_cleaning(d['info']['website'])
-                except:
-                    website = None
-
-                try:
-                    email = string_cleaning(d['info']['email'])
-                except:
-                    email = None
-
-                try:
-                    school_type = string_cleaning(d['info']['school_type'])
-                except:
-                    school_type = None
-
-                try:
-                    legal_status = string_cleaning(d['info']['legal_status'])
-                except:
-                    legal_status = None
-
-                try:
-                    provider = string_cleaning(d['info']['provider'])
-                except:
-                    provider = None
-                
-                try:
-                    fax = string_cleaning(d['info']['fax'])
-                except:
-                    fax = None
-
-                try:
-                    phone = string_cleaning(d['info']['phone'])
-                except:
-                    phone = None
-                
-                try:
-                    director = string_cleaning(d['info']['director'])
-                except:
-                    director = None
-
-                all_data.append([name, id, address, address2, zip, city, website, email, school_type, legal_status, provider, fax, phone, director])
-    else:
-        continue
-
-df_scrape_in = pd.DataFrame(all_data, columns=['name', 'id', 'address', 'address2', 'zip', 'city', 'website', 'email'
-    , 'school_type', 'legal_status', 'provider', 'fax', 'phone', 'director'])
-# removing duplicates (Nebenstandorte!)
-df_scrape = df_scrape_in.drop_duplicates(subset=['name', 'zip'], keep='first')
-# removing duplicates again but on id now as we need it to be unique
-df_scrape = df_scrape.drop_duplicates(subset=['id'], keep='first')
-# renaming relevant columns along shl names
-df_scrape = df_scrape.rename(columns={'zip': 'plz', 'address': 'anschrift', 'city': 'ort'})
-df_scrape = clean_data(df_scrape)
-# adding suffixes to columns to avoid same column names in shl and scraped data
-df_scrape = df_scrape.add_suffix('_scraped')
+### loading scraped schools
+df_scrape = utils.load_scraped_data()
 
 ### loading shl schools
-path_shl = Path(__file__) / "../data/in/shl_data.json"
-with open(path_shl, encoding="utf8") as json_file:
-    data = json.load(json_file)
-df_shl_in = pd.json_normalize(data)
-df_shl = clean_data(df_shl_in)
+df_shl_in, df_shl = utils.load_shl_data()
 
 ### grab relevant columns for fuzzy matching
 df_scrape_fuzzy = df_scrape[['id_scraped', 'name_scraped', 'anschrift_scraped', 'plz_scraped', 'ort_scraped']]
@@ -132,6 +31,14 @@ plz_shl_unique = df_shl.plz.unique()
 df_scrape_fuzzy = df_scrape_fuzzy[df_scrape_fuzzy.plz_scraped.isin(plz_shl_unique)]
 
 starttime = datetime.datetime.now()
+
+
+
+
+df_shl_fuzzy = df_shl_fuzzy.head(15)
+
+
+
 
 ### fuzzy matching
 best_matches = []
@@ -185,7 +92,7 @@ matching_full_data.to_csv(path_out, index=False, sep=';')
 # TODO: Not merging the best match for EVERY school but only when best match score was above a defined value
 df_best_matches = df_best_matches[['id', 'id_scraped', 'score']]
 matching_shl_data_enriched = pd.merge(df_shl_in, df_best_matches, on=['id'], how='left')
-path_out = Path(__file__) / "../data/shl_data_enriched.json"
+path_out = Path(__file__) / "../data/matching_shl_data_enriched.json"
 matching_shl_data_enriched.to_json(path_out, orient='records')
 
 # calculating matching_stats (Start/Endtime, Schools total, perfect matches etc.)
