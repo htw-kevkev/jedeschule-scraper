@@ -8,7 +8,6 @@
 #     http://doc.scrapy.org/en/latest/topics/settings.html
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
-import os
 
 BOT_NAME = 'jedeschule'
 
@@ -67,16 +66,14 @@ ROBOTSTXT_OBEY = False
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
+# ITEM_PIPELINES = {
+#     'jedeschule.pipelines.SchoolPipeline': 200,
+#     'jedeschule.pipelines.DatabasePipeline': 300
+# }
 ITEM_PIPELINES = {
     'jedeschule.pipelines.SchoolPipeline': 200,
-    'jedeschule.pipelines.DatabasePipeline': 300
+    'jedeschule.pipelines.JsonPipeline': 300
 }
-
-# If we are in test mode, we only want to write out to
-# stdout, we don't need to persist to DB.
-if os.environ.get('ENVIRONMENT') == 'TEST':
-    ITEM_PIPELINES.pop('jedeschule.pipelines.DatabasePipeline')
-
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
@@ -98,3 +95,8 @@ if os.environ.get('ENVIRONMENT') == 'TEST':
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+# Set log level as default level 'DEBUG' logs so much that it makes error detection difficult
+LOG_LEVEL = 'INFO'
+# Set log to file instead of command prompt
+# LOG_FILE = 'log.txt'
