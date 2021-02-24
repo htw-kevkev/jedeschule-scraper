@@ -32,14 +32,6 @@ df_scrape_fuzzy = df_scrape_fuzzy[df_scrape_fuzzy.plz_scraped.isin(plz_shl_uniqu
 
 starttime = datetime.datetime.now()
 
-
-
-
-df_shl_fuzzy = df_shl_fuzzy.head(15)
-
-
-
-
 ### fuzzy matching
 best_matches = []
 schools_total = len(df_shl_fuzzy.index) # for logging only
