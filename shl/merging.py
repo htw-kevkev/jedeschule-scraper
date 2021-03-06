@@ -21,6 +21,7 @@ df_shl_enriched = pd.json_normalize(data)
 
 # joining full scraped data on shl data with best matching scraped id and score
 df = pd.merge(df_shl_enriched, df_scrape, on=['id_scraped'], how='left')
+df['merge_status'] = None # initializing column for describing what is done with school (updated, untouched, new)
 
 log.info('Overwriting shl data with scraped data in case of good matches')
 # if threshold for score is reached shl information are overwritten with scraped data
@@ -38,26 +39,29 @@ for index, row in df.iterrows():
         df.loc[index, 'schultyp.id'] = None # information not computable for scraped data
         df.loc[index, 'schultyp.typ'] = df.loc[index, 'school_type_scraped']
         df.loc[index, 'deaktiviert'] = None # seems to be the value for active schools
+        df.loc[index, 'merge_status'] = 'updated' # flag for shl schools which are updated with scraped data
     else:
         df.loc[index, 'id_scraped'] = None # matching score is too low, so connection to best match is removed
+        df.loc[index, 'merge_status'] = 'untouched' # flag for shl schools which are not updated due to low score of best match
 
 # keep only relevant columns of dataframe
 df = df[['id', 'id_scraped', 'name', 'anschrift', 'anschrift2', 'plz', 'ort', 'email', 'homepage', 'telefon', 'telefax'
-         , 'schultyp.id', 'schultyp.typ', 'deaktiviert']]
+         , 'schultyp.id', 'schultyp.typ', 'deaktiviert', 'merge_status']]
 
 # identify scraped schools which are not mapped to a shl school
 df_new = df_scrape[~df_scrape['id_scraped'].isin(df['id_scraped'])]
-# id_next = df['id'].max() + 1
 
 log.info('Appending scraped schools which were not matched as new schools')
 for index, row in df_new.iterrows():
     new_school = [None, df_new.loc[index, 'id_scraped'], df_new.loc[index, 'name_scraped'], df_new.loc[index, 'anschrift_scraped']
                  , df_new.loc[index, 'address2_scraped'] , df_new.loc[index, 'plz_scraped'], df_new.loc[index, 'ort_scraped']
                  , df_new.loc[index, 'email_scraped'], df_new.loc[index, 'website_scraped'], df_new.loc[index, 'phone_scraped']
-                 , df_new.loc[index, 'fax_scraped'], None, df_new.loc[index, 'school_type_scraped'], None]
+                 , df_new.loc[index, 'fax_scraped'], None, df_new.loc[index, 'school_type_scraped'], None
+                 , 'new'] # 'new' = flag for schools which have been scraped but were not matched to a shl school
     new_school_series = pd.Series(new_school, index=df.columns)
     df = df.append(new_school_series, ignore_index=True)
-    # id_next += 1
+
+print(df.merge_status.unique)
 
 log.info('Dumping data')
 
